@@ -13,8 +13,9 @@ pstack skills are written in Claude Code tool language (the `Skill` tool, the `A
 | Fetch a URL | `shell` with `curl` / `wget` |
 | Search the web | `web_search` |
 | Invoke a skill (the `Skill` tool, `/command`) | Skills load natively. Follow the instructions presented. |
-| Dispatch a subagent (the `Agent`/`Task` tool) | `spawn_agent` |
-| Dispatch N parallel subagents in one turn | N `spawn_agent` calls in one response |
+| Dispatch a native subagent (the `Agent`/`Task` tool) | `spawn_agent` |
+| Dispatch N native parallel subagents in one turn | N `spawn_agent` calls in one response |
+| Dispatch an explicit external model seat | Use [provider dispatch](provider-dispatch.md) and the separately installed `agent-relay` skill through the host's execution tools. |
 | Wait for a subagent result | `wait_agent` |
 | Free a finished subagent slot | `close_agent`, when the session exposes it. Some Codex hosts don't. |
 | Track tasks (the todolist; `TaskCreate` / `TaskUpdate`, or `TodoWrite` on Claude Code) | `update_plan` |
@@ -35,9 +36,10 @@ Enabling `multi_agent` does not lift the host's thread limit. A thread-limit err
 
 poteto-mode's Subagents section sets Claude-specific defaults (`subagent_type: "pstack:poteto-agent"`, `run_in_background: true`). On Codex:
 
+- Resolve explicit `xai:` seats through provider dispatch before the native mappings below. Invoke relay directly and retain its record and report alongside the caller's seat label. Native transcript inheritance and agent instructions do not reach an external session.
 - There is no `poteto-agent` subagent type. Route an ad-hoc subagent through poteto-mode's style by dispatching a `spawn_agent` whose instructions tell it to read the `poteto-mode` skill in full first.
 - `spawn_agent` calls already run concurrently with your turn, so `run_in_background: true` has no separate flag. Issue the dispatch and continue.
-- There are no `pstack:effort-<level>` or `pstack:poteto-agent-<level>` types. When a role value carries `@<level>`, or the `default effort` line names a level, pass that level as `spawn_agent`'s `reasoning_effort` and keep the dispatch otherwise unchanged. `session` passes no `reasoning_effort`.
+- There are no `pstack:effort-<level>` or `pstack:poteto-agent-<level>` types. For a native role value that carries `@<level>`, or whose `default effort` line names a level, pass that level as `spawn_agent`'s `reasoning_effort` and keep the dispatch otherwise unchanged. Native `session` passes no `reasoning_effort`. External effort stays explicit and provider-supported.
 - There is no `comment-sicko` subagent type either. The **no-comments** skill spawns it on Claude Code; on Codex dispatch a `spawn_agent` whose instructions tell it to read `poteto-mode/references/agents/comment-sicko.md` in full first.
 - There are no `thermo-nuclear-review-subagent` or `thermo-nuclear-code-quality-review-subagent` types. The **thermos** skill spawns both on Claude Code; on Codex dispatch two `spawn_agent` calls whose instructions tell each to read the `thermo-nuclear-review` or `thermo-nuclear-code-quality-review` skill in full first and review only the diff and file contents in its prompt.
 - Claude Code runs every subagent on this machine, so the **swarm** skill's workers and the fan-out playbooks (`orchestrate`, `autopilot-full`, `autopilot-stack`) isolate writers with worktrees. The same holds on Codex.
@@ -45,13 +47,13 @@ poteto-mode's Subagents section sets Claude-specific defaults (`subagent_type: "
 
 ## Model names
 
-Skills name Claude defaults (a single-role default for code/prose/judgment plus a diverse-model panel for diverse-model panels; each model-consuming skill lists its own in a Models section). These slugs do not resolve on Codex. Substitute your configured Codex models:
+Skills name Claude defaults (a single-role default for code/prose/judgment plus a diverse-model panel for diverse-model panels; each model-consuming skill lists its own in a Models section). These slugs do not resolve as native models on Codex. Resolve an explicit `xai:` entry through [provider dispatch](provider-dispatch.md) before native substitution. External seats use the separately installed `agent-relay` skill and retain their exact model and supported effort. Substitute your configured Codex models only for native seats:
 
 - Single-model roles: your primary Codex model (for example `gpt-6-sol`).
 - Roles that default to the strongest Claude model (`bug-fix`, `perf-issue`, `hillclimb`, `strongest judgment`): your strongest Codex model (for example `gpt-6-astra`).
 - Diverse-model panels (`arena`, `architect`, `interrogate`, `how` critics, `reflect`): the adversarial signal comes from model diversity, so use the distinct Codex models available to you. A good default panel on ChatGPT is `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`. If only one model family is reachable, vary reasoning effort and note in the verdict that diversity was reduced.
 
-`/setup-pstack` writes the configured model list. On Codex, set it to your Codex model slugs.
+`/setup-pstack` writes the configured model list. On Codex, use your native Codex model slugs or validated external entries for workflows with a caller adapter. Do not replace an external failure with a native model.
 
 ## Session routing hook
 
@@ -76,8 +78,8 @@ Affected skill entry points and the optional Codex slash stubs point here. Most 
 
 | Skill | On Codex |
 |-------|----------|
-| `interrogate` | The `subagent_type`/`model`/`readonly` dispatch fields map to `spawn_agent`; substitute your configured Codex models and keep the reviewer panel model-diverse. |
-| `setup-pstack` | The skill's Other runtimes table names the Codex sheet path and how it loads; the slugs are your Codex models (see Model names above). The role rows are identical. |
+| `interrogate` | Native reviewers use `spawn_agent` with configured Codex models. `readonly` is not a `spawn_agent` argument in hosts that do not expose it, so use actual host access controls. External reviewers use read-only provider dispatch with the same completed review prompt and their own seat-to-record entries. |
+| `setup-pstack` | The skill's Other runtimes table names the Codex sheet path and its single-source loading pointer. Validate native slugs against Codex's model parameter and external IDs and explicit efforts against relay's catalog. The role rows are identical. |
 | `no-comments` | There is no `comment-sicko` subagent type; see Subagent policy above. |
 | `thermos` | There are no thermo-nuclear subagent types; see Subagent policy above. |
 | `teach` | Running `how` and `why` in parallel maps to `spawn_agent` fan-out; image generation uses the configured Codex equivalent. |
@@ -85,11 +87,11 @@ Affected skill entry points and the optional Codex slash stubs point here. Most 
 | `maintain-verification-skill` | The parallel per-feature source readers map to `spawn_agent` fan-out; the project-local skill lives under Codex's skills location, not `.claude/skills/`. |
 | `babysit` | `loop` and `AskUserQuestion` resolve through the tables above. |
 | `automate-me` | `plugin-dev:skill-development` resolves through the skills table above. |
-| `architect` | The runner panel goes through the **arena** skill, so its `spawn_agent` fan-out and model substitution apply here too. |
-| `arena` | The parallel candidates and the cross-judge map to `spawn_agent`; substitute your configured Codex models for the runners and the cross-judge pool (see Model names above). |
+| `architect` | The runner panel goes through **arena**. Native seats use its `spawn_agent` mapping. External seats use provider dispatch, caller-materialized candidate files, and the same author barrier and independent judge. |
+| `arena` | Native candidates and the cross-judge use `spawn_agent` with configured Codex models. External seats use provider dispatch before native substitution, retain their own records, and preserve the author and judge barriers. |
 | `how` | The parallel explorers and the explainer map to `spawn_agent` fan-out; substitute your configured Codex models. |
 | `reflect` | The three reviewers and the synthesizer map to `spawn_agent`; substitute your configured Codex models. The transcript finder reads Claude Code's layout under `~/.claude/projects/`, so pass the session digest step 1 allows instead. |
-| `swarm` | Each worker is a `spawn_agent` call on your configured Codex model, and those calls already run concurrently; give each writing worker its own worktree or output directory (see Subagent policy above). |
+| `swarm` | Native workers use concurrent `spawn_agent` calls. External workers use provider dispatch with caller-assigned linked worktrees. The caller collects and verifies external edits and creates commits before integration needs worker SHAs. |
 | `why` | The parallel investigators and the synthesizer map to `spawn_agent`; substitute your configured Codex models. List MCP servers from the tools Codex exposes to the session, not from `.mcp.json` or `claude mcp list`. |
 
 ## Vendored scripts

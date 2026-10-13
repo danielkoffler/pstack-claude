@@ -27,7 +27,7 @@ Before spawning reviewers, state the intent in one clear paragraph from the user
 
 ## Step 3, Spawn Reviewers
 
-Launch all reviewers in a single message with the `Agent` tool, one per entry on the `interrogate reviewers` line in `pstack-models.md`, labeled Reviewer A, B, and so on to match the entry count. If the sheet or that line is missing, use the table defaults.
+Choose one seat per entry on the `interrogate reviewers` line in `pstack-models.md`, labeled Reviewer A, B, and so on to match the entry count. If the sheet or that line is missing, use the table defaults. Resolve each seat through [provider dispatch](../poteto-mode/references/provider-dispatch.md) before native mapping or fallback.
 
 | Subagent | Default model |
 |----------|---------------|
@@ -36,15 +36,17 @@ Launch all reviewers in a single message with the `Agent` tool, one per entry on
 | Reviewer C | `sonnet` |
 | Reviewer D | `haiku` |
 
-Each reviewer gets `subagent_type: "general-purpose"`, `readonly: true`, and `model` set to its configured entry, or its table default when there is no configured line. Omit `model` for an `auto` or `inherit-parent` entry, so that reviewer runs on the parent model.
+Each native reviewer gets `subagent_type: "general-purpose"`, `readonly: true` where the host supports it, and `model` set to its configured entry, or its table default when there is no configured line. Use the host's actual access controls for read-only work. Omit `model` for a native `auto` or `inherit-parent` entry, so that reviewer runs on the parent model. Each external reviewer uses read-only provider dispatch directly.
 
-If the `Agent` tool rejects a configured entry, run that reviewer on its family's table default and say so. Families go by model name, such as Opus, Fable, or Sonnet. With no family match, use Reviewer A's default. If it rejects a table default, spawn with the closest equivalent from the valid slugs in its error message (prefer the same family and reasoning tier), and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry as a rejected slug or apply either fallback to it.
+If the native `Agent` tool rejects a configured model, run that reviewer on its family's table default and say so. Families go by model name, such as Opus, Fable, or Sonnet. With no family match, use Reviewer A's default. If it rejects a table default, spawn with the closest equivalent from the valid slugs in its error message (prefer the same family and reasoning tier), and open a separate PR to update the default table. Do not block the review on the slug issue. Never treat an alias entry, external-provider failure, or host capacity error as a rejected native slug or apply either fallback to it.
 
 Read `references/reviewer-prompt.md` and fill in the same template for every reviewer with the stated intent, the diff or file contents, the rubric from `references/rubric.md`, and the code-quality lens from `references/code-quality-review.md`.
 
+Launch the native reviewers in one message and the external reviewers through relay with that completed prompt. Keep each reviewer label associated with its model, effort, and native task or unique external prompt and record. Collect each completed external answer and unchanged report. A code-8 observation keeps the reviewer pending. A failure is a missing review without model substitution. Preserve that gap in the verdict and keep required independent-review gates closed.
+
 ## Step 4, Synthesize
 
-As results come back, build a unified picture. Parse every reviewer's findings. Merge findings that describe the same issue differently, and note which models raised each one. Findings two or more models raised independently are the highest signal. Read a lone model's finding, but weight it accordingly. Note disagreements. If one model flags something and another explicitly says the opposite, that is context for the verdict.
+As completed results come back, build a unified picture. Parse every reviewer's findings. Merge findings that describe the same issue differently, and note which models raised each one. Findings two or more models raised independently are the highest signal. Read a lone model's finding, but weight it accordingly. Note disagreements. If one model flags something and another explicitly says the opposite, that is context for the verdict. Finish the verdict only after each seat completes or has a recorded gap. Provider completion alone does not validate a reviewer's findings.
 
 ## Step 5, Lead Judgment
 
@@ -80,4 +82,6 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 
 ## Reasoning effort
 
-A role value in the override sheet may name a reasoning effort after its model, as in `opus @xhigh`. Levels on Claude Code: `low`, `medium`, `high`, `xhigh`, `max`. Which ones apply depends on the model. A value without `@` takes the sheet's `default effort` line, a level or `session`, and `session` when the sheet has no such line. `session` sets no effort, so the dispatch is the usual one. Strip the suffix before reading the model: `inherit-parent` or `auto` still omits `model` at every level, and a model name is passed as `model`. On Claude Code, a level picks the effort agent from the `subagent_type` you would otherwise use. `pstack:poteto-agent` becomes `subagent_type: "pstack:poteto-agent-<level>"`. `general-purpose`, or no `subagent_type`, becomes `subagent_type: "pstack:effort-<level>"`. The effort agents set only `effort`, so the model you pass still decides the model. On Codex, pass the level as `spawn_agent`'s `reasoning_effort` and keep the usual instructions.
+Resolve external seats through [provider dispatch](../poteto-mode/references/provider-dispatch.md) before native effort mapping. An `xai:<exact-id>` entry resolves effort from its `@<effort>` suffix or an explicit non-session sheet default. Validate that concrete effort against the exact provider model and pass it explicitly to relay. Missing or `session` effort blocks the seat. Do not inherit a native session effort, use native effort agents, or convert `max` to `xhigh` for it.
+
+A native role value in the override sheet may name a reasoning effort after its model, as in `opus @xhigh`. Native levels on Claude Code: `low`, `medium`, `high`, `xhigh`, `max`. Which ones apply depends on the model. A value without `@` takes the sheet's `default effort` line, a level or `session`, and `session` when the sheet has no such line. `session` sets no effort, so the dispatch is the usual one. Strip the suffix before reading the model: `inherit-parent` or `auto` still omits `model` at every level, and a native model name is passed as `model`. On Claude Code, a native level picks the effort agent from the `subagent_type` you would otherwise use. `pstack:poteto-agent` becomes `subagent_type: "pstack:poteto-agent-<level>"`. `general-purpose`, or no `subagent_type`, becomes `subagent_type: "pstack:effort-<level>"`. The effort agents set only `effort`, so the model you pass still decides the model. On Codex, pass the native level as `spawn_agent`'s `reasoning_effort` and keep the usual instructions.

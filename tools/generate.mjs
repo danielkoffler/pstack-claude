@@ -668,7 +668,8 @@ export function modelsSection(roles) {
   const bullets = roles.map((r) => `- ${r.role}: ${codeList(r.models)}`).join("\n");
   return (
     "Role defaults, stamped from `plugins/pstack/models.json` (edit there, rerun `tools/generate.mjs`). " +
-    "A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime.\n\n" +
+    "A matching role line in the `pstack-models.md` override sheet overrides each at runtime; `/setup-pstack` writes it and lists its path per runtime. " +
+    "Resolve explicit external choices through [provider dispatch](../poteto-mode/references/provider-dispatch.md) before native model mapping or fallback.\n\n" +
     bullets
   );
 }
@@ -679,17 +680,21 @@ export function modelsSection(roles) {
 // dispatched through, with the model still passed on the call.
 export function effortSection(levels, defaultEffort) {
   return (
-    "A role value in the override sheet may name a reasoning effort after its model, as in `opus @xhigh`. " +
-    "Levels on Claude Code: " + codeList(levels) + ". Which ones apply depends on the model. " +
+    "Resolve external seats through [provider dispatch](../poteto-mode/references/provider-dispatch.md) before native effort mapping. " +
+    "An `xai:<exact-id>` entry resolves effort from its `@<effort>` suffix or an explicit non-session sheet default. " +
+    "Validate that concrete effort against the exact provider model and pass it explicitly to relay. Missing or `session` effort blocks the seat. " +
+    "Do not inherit a native session effort, use native effort agents, or convert `max` to `xhigh` for it.\n\n" +
+    "A native role value in the override sheet may name a reasoning effort after its model, as in `opus @xhigh`. " +
+    "Native levels on Claude Code: " + codeList(levels) + ". Which ones apply depends on the model. " +
     "A value without `@` takes the sheet's `default effort` line, a level or `session`, " +
     `and ${code(defaultEffort)} when the sheet has no such line. \`session\` sets no effort, so the dispatch ` +
     "is the usual one. Strip the suffix before reading the model: `inherit-parent` or `auto` still omits `model` " +
-    "at every level, and a model name is passed as `model`. " +
-    "On Claude Code, a level picks the effort agent from the `subagent_type` you would otherwise use. " +
+    "at every level, and a native model name is passed as `model`. " +
+    "On Claude Code, a native level picks the effort agent from the `subagent_type` you would otherwise use. " +
     "`pstack:poteto-agent` becomes `subagent_type: \"pstack:poteto-agent-<level>\"`. " +
     "`general-purpose`, or no `subagent_type`, becomes `subagent_type: \"pstack:effort-<level>\"`. " +
     "The effort agents set only `effort`, so the model you pass still decides the model. " +
-    "On Codex, pass the level as `spawn_agent`'s `reasoning_effort` and keep the usual instructions."
+    "On Codex, pass the native level as `spawn_agent`'s `reasoning_effort` and keep the usual instructions."
   );
 }
 
@@ -776,9 +781,12 @@ export function overrideSheetBlock(models) {
     "the values here override those defaults. Delete a line to fall back to the skill default. " +
     "A value of `inherit-parent` or `auto` runs that role on the parent session's model (the `Agent` call omits `model`); " +
     "an alias entry in a panel list still counts toward that panel's fan-out. " +
-    "A model may carry a reasoning effort, as in `opus @xhigh` (levels: " + models.efforts.join(", ") + "); " +
-    "the role then runs through the pstack effort agent of that level, each entry of a panel list on its own. " +
-    "`default effort` sets the level for a value without one; `session` keeps the parent session's effort. " +
+    "A native model may carry a reasoning effort, as in `opus @xhigh` (levels: " + models.efforts.join(", ") + "); " +
+    "on Claude Code the native role then runs through the pstack effort agent of that level, each entry of a panel list on its own. " +
+    "`default effort` sets the level for a value without a suffix; native `session` keeps the parent session's effort. " +
+    "An external `xai:<exact-id>` entry needs a workflow with a caller adapter and a concrete effort from its suffix or an explicit non-session sheet default. " +
+    "Validate that effort against the exact provider model and pass it explicitly to relay. Missing or `session` effort blocks the external seat. " +
+    "It uses the separately installed agent-relay skill instead of native aliases, effort agents, or fallback. " +
     "`session hook: off` stops the Claude Code or Codex SessionStart hook, or the pstack Pi extension, from injecting the poteto-mode mandate; " +
     "any other value, or no line, leaves it on.\n\n" +
     rows +

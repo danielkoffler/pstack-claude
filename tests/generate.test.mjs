@@ -449,7 +449,7 @@ describe("deriveSkill", () => {
     const out = deriveSkill("plugins/pstack/skills/interrogate/SKILL.md", text, models, leads);
     expect(out.startsWith(front("", "interrogate") + "no reviewer table here\n")).toBe(true);
     expect(out).not.toContain("| Reviewer A");
-    expect(out).toContain("\n## Reasoning effort\n\nA role value in");
+    expect(section("Reasoning effort")(lines(out))).not.toBeNull();
   });
 
   test("appends the Reasoning effort section after the Models section", () => {
