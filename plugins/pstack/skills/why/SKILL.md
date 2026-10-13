@@ -11,7 +11,7 @@ On GitHub Copilot, read the [platform mapping](../poteto-mode/references/copilot
 
 Investigate the motivation and intent behind code. The companion `how` skill answers what the code does and how it works. `why` answers what forces led to its shape.
 
-Each spawn below names a role line in `pstack-models.md` and a default in [Models](#models). Set `model` to that line's value, or to the default if the sheet or the line is missing. Leave `model` unset when the value is `auto` or `inherit-parent`. If the `Agent` tool rejects a slug, use the default and say so. If it rejects the default, use the closest valid slug of the same family from its error message.
+Each spawn below names a role line in `pstack-models.md` and a default in [Models](#models). Set `model` to that line's value, or to the default if the sheet or the line is missing. Leave `model` unset when the value is `auto` or `inherit-parent`. These dispatch and fallback rules apply only to native model entries. This workflow has no external caller adapter. An explicit `xai:` entry is a blocked seat; do not pass it to `Agent` or substitute a native model. If the `Agent` tool rejects a native slug, use the native default and say so. If it rejects the native default, use the closest valid native slug of the same family from its error message.
 
 Every spawn is `general-purpose` with `readonly: false` (agent mode). **Do not use readonly/Ask mode.** It strips MCP access, which disables the MCP-backed investigators and the synthesizer's citation spot-checks. Investigators still shouldn't write anything.
 

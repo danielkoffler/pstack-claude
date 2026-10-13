@@ -36,6 +36,12 @@
       "since": "0.9.29",
       "upstream": "not-proposed"
     },
+    "plugins/pstack/skills/how/SKILL.md": {
+      "kind": "port-feature",
+      "why": "Limits Agent dispatch and fallback to native entries and blocks explicit external seats until this workflow has a caller adapter.",
+      "since": "0.9.84",
+      "upstream": "not-proposed"
+    },
     "plugins/pstack/skills/interrogate/SKILL.md": {
       "kind": "port-feature",
       "why": "Routes explicit external reviewers through agent-relay before native fallback, retains equivalent prompts and seat-to-record associations, uses actual host access controls, and records missing reviews before synthesis.",
@@ -248,7 +254,7 @@
     },
     "plugins/pstack/skills/reflect/SKILL.md": {
       "kind": "port-feature",
-      "why": "Finds the session transcript with the port's find-transcript.mjs under Claude Code's projects directory, keeps the parent's conclusions out of the reviewer prompts (a fallback digest records events without a verdict, and nothing goes beside a transcript path), and drops Cursor's readonly agent mode and inline model column.",
+      "why": "Finds the session transcript with the port's find-transcript.mjs under Claude Code's projects directory, keeps the parent's conclusions out of the reviewer prompts (a fallback digest records events without a verdict, and nothing goes beside a transcript path), and drops Cursor's readonly agent mode and inline model column. Limits Agent dispatch and fallback to native entries and blocks external seats without a caller adapter.",
       "since": "0.1.0",
       "upstream": "not-proposed"
     },
@@ -280,6 +286,12 @@
       "kind": "policy",
       "why": "Requires quoting the failure content, not the assertion line, as evidence that the new test fails for the intended reason.",
       "since": "0.9.21",
+      "upstream": "not-proposed"
+    },
+    "plugins/pstack/skills/why/SKILL.md": {
+      "kind": "port-feature",
+      "why": "Limits Agent dispatch and fallback to native entries and blocks explicit external seats until this workflow has a caller adapter.",
+      "since": "0.9.84",
       "upstream": "not-proposed"
     },
     "plugins/pstack/skills/why/references/epistemics.md": {
